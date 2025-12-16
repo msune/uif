@@ -1,0 +1,16 @@
+OUT_DIR ?= output
+GO ?= go
+GOFLAGS ?=
+
+.PHONY: all build clean
+
+all: build
+build:
+	mkdir -p $(OUT_DIR)
+	$(MAKE) -C bpf
+	cp bpf/untagged.o cmd/uif/untagged.o
+	$(GO) build $(GOFLAGS) -o $(OUT_DIR)/uif ./cmd/uif
+clean:
+	$(MAKE) -C bpf clean || true
+	rm -rf cmd/uif/untagged.o || true
+	rm -rf $(OUT_DIR)/* || true
