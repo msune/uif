@@ -2,7 +2,7 @@ OUT_DIR ?= output
 GO ?= go
 GOFLAGS ?=
 
-.PHONY: all build clean
+.PHONY: all build clean check
 
 all: build
 build:
