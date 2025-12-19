@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build_test:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: "Checkout uif"
+        uses: actions/checkout@v5
+        with:
+          path: uif
+          fetch-depth: 0
+          fetch-tags: 1
+
+      - name: "Install deps..."
+        run: |
+          sudo add-apt-repository universe
+          sudo apt-get update
+          sudo apt-get install -y bridge-utils              \
+                                  clang                     \
+                                  iproute2                  \
+                                  libbpf-dev                \
+                                  linux-libc-dev            \
+                                  linux-headers-$(uname -r) \
+                                  llvm                      \
+                                  make
+          sudo ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/asm
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+
+      - name: "Run build..."
+        run: |
+          cd uif
+          make
+      - name: "Run _a_ unit tests..."
+        run: |
+          cd uif
+          make check
