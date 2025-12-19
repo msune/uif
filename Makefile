@@ -1,6 +1,7 @@
 OUT_DIR ?= output
 GO ?= go
 GOFLAGS ?=
+GOENV ?= CGO_ENABLED=0
 
 .PHONY: all build clean check
 
@@ -9,7 +10,7 @@ build:
 	mkdir -p $(OUT_DIR)
 	$(MAKE) -C bpf
 	cp bpf/untagged.o cmd/uif/untagged.o
-	$(GO) build $(GOFLAGS) -o $(OUT_DIR)/uif ./cmd/uif
+	$(GOENV) $(GO) build $(GOFLAGS) -o $(OUT_DIR)/uif ./cmd/uif
 
 check: build
 	$(MAKE) -C tests
