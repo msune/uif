@@ -83,6 +83,14 @@ func loadAndAttach(ifName string, dir string, ifIndex int32) error {
 	}
 
  	pinPath := basePinDir + ifName + "-" + dir
+
+	// If pinPath exists it's from an interface that existed
+	// with the same name. Remove it and cleanup refs.
+	if err := os.Remove(pinPath); err != nil && !os.IsNotExist(err) {
+		log.Printf("ERROR: unable to remove pinPaht '%s' of iface %s (old iface): %v", pinPath, ifName, err)
+		return err
+	}
+
 	err = link.Pin(pinPath)
 	if err != nil {
 		log.Printf("ERROR: unable to pin TCX program on iface '%s' to path '%s': %v", ifName, pinPath, err)
