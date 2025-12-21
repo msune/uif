@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strconv"
 	"golang.org/x/sys/unix"
 
 	"github.com/spf13/cobra"
@@ -124,24 +125,22 @@ func loadAndAttach(ifName string, dir string, ifIndex int32) error {
 	return nil
 }
 
-func create(cmd *cobra.Command, args []string) {
-	name := args[0]
-
+func create(name string, vlanId int) {
 	nl, err := netlink.LinkByName(name)
 	if err != nil {
 		log.Fatalf("ERROR: interface '%s' not found. %v", name, err)
 	}
 
-	// Create VLAN 0 subinterface
-	vlan0 := &netlink.Vlan{
+	// Create VLAN <id> subinterface
+	vlan := &netlink.Vlan{
 		LinkAttrs: netlink.LinkAttrs{
 			Name:        name + ".ut",
 			ParentIndex: nl.Attrs().Index,
 		},
-		VlanId: 0,
+		VlanId: vlanId,
 	}
 
-	if err := netlink.LinkAdd(vlan0); err != nil {
+	if err := netlink.LinkAdd(vlan); err != nil {
 		log.Fatalf("failed to add vlan: %v", err)
 	}
 
@@ -159,6 +158,33 @@ func create(cmd *cobra.Command, args []string) {
 	}
 }
 
+func paramsError(cmd *cobra.Command, args []string) {
+	log.Printf("ERROR: invalid parameters %v", args)
+	cmd.Usage()
+	os.Exit(1)
+}
+
+func parseAndCreate(cmd *cobra.Command, args []string) {
+	name := args[0]
+	vlanId := int(0)
+
+	if len(args) == 3 {
+		vlan := args[1]
+		_vlanId, err := strconv.Atoi(args[2])
+		if err != nil || vlan != "vlan" {
+			paramsError(cmd, args)
+		}
+
+		vlanId = _vlanId
+	} else if len(args) == 1 {
+
+	} else {
+		paramsError(cmd, args)
+	}
+
+	create(name, vlanId)
+}
+
 func main() {
 	root := &cobra.Command{
 		Use:   "uif",
@@ -166,10 +192,10 @@ func main() {
 	}
 
 	createCmd := cobra.Command{
-		Use:   "create <iface>",
+		Use:   "create <iface> [vlan <id>]",
 		Short: "Create an untagged interface from iface ('iface.ut')",
-		Args:  cobra.ExactArgs(1),
-		Run:   create,
+		Args:  cobra.MinimumNArgs(1),
+		Run:   parseAndCreate,
 	}
 
 	root.AddCommand(&createCmd)

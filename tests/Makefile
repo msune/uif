@@ -1,13 +1,18 @@
 OUT_DIR ?= output
 GO ?= go
 GOFLAGS ?=
+CREATE_OPS ?=
 
 .PHONY: all build clean check test
 
 all: check
-check: setup test test_ns clean
+check: test_basic test_ns test_vlan1
 
-setup:
+# Basic test (VLAN 0)
+_test_basic_hdr:
+	echo "### Running test basic $(CREATE_OPS)"
+
+_test_basic_setup:
 	sudo ip netns add ext
 	sudo ip link add test_br123 type bridge
 	sudo ip link set up dev test_br123
@@ -16,7 +21,7 @@ setup:
 	sudo ip link set netns ext dev p2_pair
 	sudo ip link set up dev p1
 	sudo ip link set up dev p1_pair
-	sudo ../output/uif create p1_pair
+	sudo ../output/uif create p1_pair $(CREATE_OPS)
 	sudo ip link set up dev p1_pair.ut
 	sudo ip link set up dev p2
 	sudo ip link set master test_br123 dev p1
@@ -24,19 +29,32 @@ setup:
 	sudo ip netns exec ext ip link set up dev p2_pair
 	sudo ip addr add 192.168.99.1/24 dev p1_pair.ut
 	sudo ip netns exec ext ip addr add 192.168.99.2/24 dev p2_pair
-test:
+
+_test_basic_check:
 	ping -c 3 192.168.99.2 || false
 
+_test_basic_clean:
+	sudo ip link del p1 || true
+	sudo ip link del p2 || true
+	sudo ip link del test_br123 || true
+	sudo ip netns del ext || true
+
+test_basic: . _test_basic_setup _test_basic_check _test_basic_clean
+	echo "Running test basic $(CREATE_OPS)"
+
+# Test VLAN != 0 (vlan 1)
+test_vlan1:
+	$(MAKE) CREATE_OPS="vlan 1" test_basic
+
 test_ns:
+	echo "### Running test_ns"
 	sudo ip netns add ext2
 	sudo ip netns exec ext2 ip link add test type veth
 	sudo ip netns exec ext2 ip link set up dev test
 	sudo ip netns exec ext2 ../output/uif create test
 
-clean:
+_test_ns_clean:
 	sudo ip netns exec ext2 ip link del test || true
 	sudo ip netns del ext2 || true
-	sudo ip link del p1 || true
-	sudo ip link del p2 || true
-	sudo ip link del test_br123 || true
-	sudo ip netns del ext || true
+
+clean: _test_basic_clean _test_ns_clean
