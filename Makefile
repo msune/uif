@@ -15,7 +15,6 @@ build:
 check: build
 	$(MAKE) -C tests
 	$(MAKE) -C tests #Run it a second time, to test recreation of ifaces
-	$(MAKE) -C tests clean
 clean:
 	$(MAKE) -C tests clean || true
 	$(MAKE) -C bpf clean || true
