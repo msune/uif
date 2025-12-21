@@ -82,7 +82,7 @@ func loadAndAttach(ifName string, dir string, ifIndex int32) error {
 		return err
 	}
 
- 	pinPath := basePinDir + ifName + "-" + dir
+	pinPath := basePinDir + "if" + string(ifIndex) + "-" + dir[:3]
 
 	// If pinPath exists it's from an interface that existed
 	// with the same name. Remove it and cleanup refs.
