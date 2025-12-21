@@ -4,13 +4,11 @@ GOFLAGS ?=
 
 .PHONY: all build clean check test
 
-
 all: check
-check: setup test clean
+check: setup test test_ns clean
 
 setup:
 	sudo ip netns add ext
-	sudo ip netns exec ext mount -t bpf bpf /sys/fs/bpf
 	sudo ip link add test_br123 type bridge
 	sudo ip link set up dev test_br123
 	sudo ip link add p1 type veth peer name p1_pair
@@ -28,7 +26,16 @@ setup:
 	sudo ip netns exec ext ip addr add 192.168.99.2/24 dev p2_pair
 test:
 	ping -c 3 192.168.99.2 || false
+
+test_ns:
+	sudo ip netns add ext2
+	sudo ip netns exec ext2 ip link add test type veth
+	sudo ip netns exec ext2 ip link set up dev test
+	sudo ip netns exec ext2 ../output/uif create test
+
 clean:
+	sudo ip netns exec ext2 ip link del test || true
+	sudo ip netns del ext2 || true
 	sudo ip link del p1 || true
 	sudo ip link del p2 || true
 	sudo ip link del test_br123 || true

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"golang.org/x/sys/unix"
 
 	"github.com/spf13/cobra"
 	"github.com/vishvananda/netlink"
@@ -20,10 +21,31 @@ const (
 //go:embed untagged.o
 var bpfProgram []byte
 
+
+func ensureBpfFsIsMounted() {
+	if err := os.MkdirAll("/sys/fs/bpf", 0755); err != nil {
+		log.Fatalf("Unable to mount bpffs: %v", err)
+	}
+
+	err := unix.Mount("bpffs", "/sys/fs/bpf", "bpf", 0, "")
+	if err == nil {
+		return
+	}
+
+	if errors.Is(err, unix.EBUSY) {
+		return
+	}
+
+	log.Fatalf("Unable to mount bpffs: %v", err)
+}
+
 func loadAndAttach(ifName string, dir string, ifIndex int32) error {
 	objs := struct {
 		Prog *libebpf.Program `ebpf:"prog"`
 	}{}
+
+	/* BPF filesystem might not be mounted in network NSs. Mount it */
+	ensureBpfFsIsMounted()
 
 	err := os.MkdirAll(basePinDir, 0755)
 	if err != nil {
